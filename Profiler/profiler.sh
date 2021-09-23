@@ -107,11 +107,12 @@ check_active_rm() {
 
 extract_yarn_appls() {
 
-    apps=`$activerm_url$rmapps`
-
+    #apps=`$activerm_url$rmapps`
     appdump=YarnApplicationDump_$curr_date.json
+    #echo $apps >  $output_dir$appdump
 
-    echo $apps >  $output_dir$appdump
+    eval $activerm_url$rmapps > $output_dir$appdump      
+    exit 
 
 }
 
