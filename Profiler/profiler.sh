@@ -38,7 +38,7 @@ export rmnodes='/ws/v1/cluster/nodes'
 
 check_kerberos()  { 
 
-    if [ "$IS_SECURE" == "Y" ]; then 
+    if [ "$RM_SECURE" == "Y" ]; then 
         CURL="$CURL -k"
         http="https://"
     else 
@@ -46,7 +46,7 @@ check_kerberos()  {
         http="http://"
     fi 
 
-    if [ "$IS_KERBERIZED" == "Y" ]; then
+    if [ "$RM_KERBERIZED" == "Y" ]; then
 
         echo " Kerberos is set as True. Make sure to Kinit before executing the script. Current Credential Cache is ... "
         eval klist
@@ -105,49 +105,62 @@ check_active_rm() {
 
 }
 
+###########################################
+### Extract YARN Applications Logs 
+###########################################
+
 extract_yarn_appls() {
 
-    #apps=`$activerm_url$rmapps`
     appdump=YarnApplicationDump_$curr_date.json
-    #echo $apps >  $output_dir$appdump
-
-    eval $activerm_url$rmapps > $output_dir$appdump      
+    eval $activerm_url$rmapps >  $yarn_out_dir$appdump
+    
     exit 
 
 }
 
-
+###########################################
+### Extract YARN Host Logs 
+###########################################
 extract_yarn_hosts()  {
 
-    rmnodes=`$activerm_url$rmnodes`
     nodedump=YarnNodesDump_$curr_date.json
-
-    echo $rmnodes >  $output_dir$nodedump
+    eval $activerm_url$rmnodes >  $yarn_out_dir$nodedump
 
 }
+
+###########################################
+### Extract YARN Metrics Logs 
+###########################################
 
 extract_yarn_metrics()  {
 
-    rmmetrics=`$activerm_url$rmmetrics`
     metricsdump=YarnMetricsDump_$curr_date.json
-
-    echo $rmmetrics >  $output_dir$metricsdump
+    eval $activerm_url$rmmetrics >  $yarn_out_dir$metricsdump
 
 }
 
-
+###########################################
+### Extract YARN Scheduler Logs 
+###########################################
 
 extract_yarn_scheduler()  {
 
     rmscheduler=`$activerm_url$rmscheduler`
     schedulerdump=YarnSchedulerDump_$curr_date.json
 
-    echo $rmscheduler >  $output_dir$schedulerdump
+    echo $rmscheduler >  $yarn_out_dir$schedulerdump
 
 }
 
 
+###############################################################
+### Extract YARN Logs 
+### - Applications, Logs, Hosts, Metrics and Scheduler 
+###############################################################
 extract_yarn() { 
+
+    yarn_out_dir=$output_dir/YARN/
+    mkdir -p $yarn_out_dir
 
     check_active_rm
     extract_yarn_appls
@@ -186,38 +199,25 @@ extract_ambari_bp() {
     ambariRM="$CURL -X GET -u $AMBARI_ADMIN_USERID:$AMBARI_ADMIN_PASSWORD $http$AMBARI_SERVER:$AMBARI_PORT/api/v1/clusters/$CLUSTER_NAME/services/YARN/components/RESOURCEMANAGER"
     ambariNM="$CURL -X GET -u $AMBARI_ADMIN_USERID:$AMBARI_ADMIN_PASSWORD $http$AMBARI_SERVER:$AMBARI_PORT/api/v1/clusters/$CLUSTER_NAME/services/YARN/components/NODEMANAGER"
 
-    bp=`$bpurl`
-    hosts=`$ambariHosts`
-    services=`$ambariServices`
-    components=`$ambariComponents`
-    stack=`$ambariStack`
-
-    ambarihdfs=`$ambariHDFS`
-    ambarirm=`$ambariRM`
-    ambarinm=`$ambariNM`
-
-
     bppath=AmbariBlueprint_$curr_date.json
     hostpath=AmbariHost_$curr_date.json
     servicepath=AmbariServices_$curr_date.json
     componentspath=AmbariComponents_$curr_date.json
     stackpath=AmbariStack_$curr_date.json
 
-
     ambarihdfspath=AmbariHDFS_$curr_date.json
     ambarirmpath=AmbariRM_$curr_date.json
     ambarinmpath=AmbariNM_$curr_date.json
 
-    echo $bp > $output_dir$bppath
-    echo $hosts > $output_dir$hostpath
-    echo $components > $output_dir$componentspath
-    echo $services > $output_dir$servicepath
-    echo $stack > $output_dir$stackpath
+    eval $bpurl > $ambari_out_dir$bppath
+    eval $ambariHosts > $ambari_out_dir$hostpath
+    eval $ambariComponents > $ambari_out_dir$componentspath
+    eval $ambariServices > $ambari_out_dir$servicepath
+    eval $ambariStack > $ambari_out_dir$stackpath
 
-    echo $ambarihdfs > $output_dir$ambarihdfspath
-    echo $ambarirm > $output_dir$ambarirmpath
-    echo $ambarinm > $output_dir$ambarinmpath
-    
+    eval $ambariHDFS > $ambari_out_dir$ambarihdfspath
+    eval $ambariRM > $ambari_out_dir$ambarirmpath
+    eval $ambariNM > $ambari_out_dir$ambarinmpath
     
 } 
 
@@ -239,15 +239,11 @@ extract_ranger_policies() {
     rangerRepos="$CURL -X GET -u $RANGER_USER:$RANGER_PWD -X GET $http$RANGER_URL:$RANGER_PORT/service/public/api/repository"
     rangerPolicies="$CURL -X GET -u $RANGER_USER:$RANGER_PWD -X GET $http$RANGER_URL:$RANGER_PORT/service/public/api/policy"
 
-
-    repos=`$rangerRepos`
-    policies=`$rangerPolicies`
-
     ranger_repos=Ranger_Repos_$curr_date.json
     ranger_policies=Ranger_Policies_$curr_date.json
 
-    echo $repos > $output_dir$ranger_repos
-    echo $policies > $output_dir$ranger_policies
+    eval $rangerRepos > $ranger_out_dir$ranger_repos
+    eval $rangerPolicies > $ranger_out_dir$ranger_policies
 
 }
 
@@ -259,10 +255,15 @@ extract_hdp() {
     extract_yarn
 
     if [ "$INITIAL_EXEC" == "Y" ]; then 
+        ambari_out_dir=$output_dir/AMBARI/
+        mkdir -p $ambari_out_dir
+
        extract_ambari_bp
       
 
        if [ "$IS_RANGER_SETUP" == "Y" ]; then
+            ranger_out_dir=$output_dir/RANGER/
+            mkdir -p $ranger_out_dir
             extract_ranger_policies
        fi 
        echo " ####################################################################################################"
@@ -278,6 +279,9 @@ extract_hdp() {
 ###########################################
 
 extract_cm_info() {
+
+    CM_out_dir=$output_dir/CM/
+    mkdir -p $CM_out_dir
 
     if [ "$CM_SECURED" == "Y" ]; then 
         CURL="$CURL -k"
@@ -295,21 +299,16 @@ extract_cm_info() {
     cmhost="$CURL -X GET -u $CM_ADMIN_USER:$CM_ADMIN_PASSWORD $http$CM_SERVER_URL:$CM_SERVER_PORT/api/$CM_API_VERSION/hosts"
     cmconfig="$CURL -X GET -u $CM_ADMIN_USER:$CM_ADMIN_PASSWORD $http$CM_SERVER_URL:$CM_SERVER_PORT/api/$CM_API_VERSION/cm/allHosts/config"
     cmexport="$CURL -X GET -u $CM_ADMIN_USER:$CM_ADMIN_PASSWORD $http$CM_SERVER_URL:$CM_SERVER_PORT/api/$CM_API_VERSION/clusters/$CM_CLUSTER/export"
-
-    services=`$cmservices`
-    hosts=`$cmhost`
-    config=`$cmconfig`
-    cmexp=`$cmexport`
     
     cm_services=cmServices_$curr_date.json
     cm_hosts=cmHosts_$curr_date.json
     cm_config=cmConfig_$curr_date.json
     cm_export=cmExport_$curr_date.json
     
-    echo $services > $output_dir$cm_services
-    echo $hosts > $output_dir$cm_hosts
-    echo $config > $output_dir$cm_config
-    echo $cmexp > $output_dir$cm_export 
+    eval $cmservices > $CM_out_dir$cm_services
+    eval $cmhost > $CM_out_dir$cm_hosts
+    eval $cmconfig > $CM_out_dir$cm_config
+    eval $cmexport > $CM_out_dir$cm_export 
 
 }
 
@@ -320,6 +319,9 @@ extract_cm_info() {
 extract_impala() { 
 
     echo "Extracting Impala Queries " 
+
+    IMPALA_out_dir=$output_dir/IMPALA/
+    mkdir -p $IMPALA_out_dir
 
     if [ "$CM_SECURED" == "Y" ]; then 
         CURL="$CURL -k"
@@ -358,9 +360,8 @@ extract_impala() {
 	      
 	       cmimpala="$CURL -X GET -u ${CM_ADMIN_USER}:${CM_ADMIN_PASSWORD} $URL_FILTER"
 
- 	       impalaextract=`$cmimpala`
-               cm_impalaext=impala_${DAY}_${HOUR}_${OFFSET}.json
-	       echo $impalaextract > $output_dir$cm_impalaext
+ 	       cm_impalaext=impala_${DAY}_${HOUR}_${OFFSET}.json
+	       eval $cmimpala > $IMPALA_out_dir$cm_impalaext
 
 	    done
 	  done
@@ -374,6 +375,7 @@ extract_cdp() {
     extract_yarn
     
     if [ "$INITIAL_EXEC" == "Y" ]; then 
+       
        extract_cm_info
        #extract_sentry_policies
 
@@ -390,6 +392,18 @@ extract_cdp() {
     echo " #################################################################################################################"
 
 }
+ 
+extract_other_oss() { 
+
+    check_kerberos
+    extract_yarn
+
+    echo " ####################################################################################################"
+    echo " NOTE: This is an Initial Extract. Please inspect the files to make sure the extracts are fine .... "
+    echo " ####################################################################################################"
+
+}
+
 
 ##########################################################################################################
 ################################## START of Main Code ####################################################
@@ -408,8 +422,14 @@ if [ "$DISTRIBUTION" == "HDP" ]; then
 else if [ "$DISTRIBUTION" == "CDP" ]; then 
       echo " Distribtuion is Cloudera . Starting Extract ... " 
       extract_cdp
-     else 
-        echo  " Invalid Distribution"
-        exit 1
+
+      else if [ "$DISTRIBUTION" == "OTH" ]; then 
+              echo " Other Open Source Distribution . Starting Extract ... " 
+              extract_other_oss
+
+           else 
+              echo  " Invalid Distribution"
+              exit 1
+	   fi
      fi
 fi

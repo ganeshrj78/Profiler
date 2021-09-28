@@ -67,7 +67,7 @@ After initial extraction, we recommend running the script daily for at least 2 w
 </tr>
 <tr>
 <td>
-<p><span style="font-weight: 400;">IS_SECURE</span></p>
+<p><span style="font-weight: 400;">RM_SECURE</span></p>
 </td>
 <td>
 <p><span style="font-weight: 400;">Is https enabled (Y/N)&nbsp;</span></p>
@@ -75,7 +75,7 @@ After initial extraction, we recommend running the script daily for at least 2 w
 </tr>
 <tr>
 <td>
-<p><span style="font-weight: 400;">IS_KERBERIZED</span></p>
+<p><span style="font-weight: 400;">RM_KERBERIZED</span></p>
 </td>
 <td>
 <p><span style="font-weight: 400;">Is Kerberized (Y/ N)&nbsp;</span></p>
