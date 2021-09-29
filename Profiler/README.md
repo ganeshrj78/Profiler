@@ -4,13 +4,15 @@
 
 ### 1. YARN Application execution, Host , metrics and Scheduler Information
 
-### 2. If the Distribution is HDP, then  extract
+### 2. If the Distribution is HDP, then extract contains
 ####     -  the blueprint, Service, hosts and host components from Ambari
 ####     -  Ranger policies and Repos if Ranger is Used
 
-### 3. If the Distribution is CDH, then  extract
+### 3. If the Distribution is CDH, then extract contains
 ####     -  the Services, host and components from CM  
 ####     -  Impala logs based on the input dates 
+
+### 4. If the Distribution is neither CDH or HDP (i.e. OTH), then only YARN Metrics will be extracted
 
 
 # Configuration Updates 
@@ -67,7 +69,7 @@ After initial extraction, we recommend running the script daily for at least 2 w
 </tr>
 <tr>
 <td>
-<p><span style="font-weight: 400;">IS_SECURE</span></p>
+<p><span style="font-weight: 400;">RM_SECURE</span></p>
 </td>
 <td>
 <p><span style="font-weight: 400;">Is https enabled (Y/N)&nbsp;</span></p>
@@ -75,7 +77,7 @@ After initial extraction, we recommend running the script daily for at least 2 w
 </tr>
 <tr>
 <td>
-<p><span style="font-weight: 400;">IS_KERBERIZED</span></p>
+<p><span style="font-weight: 400;">RM_KERBERIZED</span></p>
 </td>
 <td>
 <p><span style="font-weight: 400;">Is Kerberized (Y/ N)&nbsp;</span></p>
@@ -129,7 +131,7 @@ After initial extraction, we recommend running the script daily for at least 2 w
 <p><span style="font-weight: 400;">DISTRIBUTION</span></p>
 </td>
 <td>
-<p><span style="font-weight: 400;">On-Prem Distribution : HDP or CDP&nbsp;</span></p>
+<p><span style="font-weight: 400;">On-Prem Distribution : HDP or CDH or OTH&nbsp;</span></p>
 </td>
 </tr>
 <tr>
@@ -233,7 +235,7 @@ After initial extraction, we recommend running the script daily for at least 2 w
 </tr>
 <tr>
 <td rowspan="10">
-<p><span style="font-weight: 400;">Cloudera Manager and Impala&nbsp; Related Configurations if the distribution is CDP</span></p>
+<p><span style="font-weight: 400;">Cloudera Manager and Impala&nbsp; Related Configurations if the distribution is CDH</span></p>
 </td>
 <td>
 <p><span style="font-weight: 400;">CM_SERVER_URL</span></p>
@@ -327,4 +329,4 @@ After initial extraction, we recommend running the script daily for at least 2 w
 
 # Output: 
 
-### All the extracts are stored as part of the Output Folder
+### All the extracts are stored as part of the Output Folder within their respective components Sub-folders.
