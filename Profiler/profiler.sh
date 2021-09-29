@@ -23,6 +23,7 @@
 
 export curr_date=`date +"%Y%m%d_%H%M%S"`
 export curr_impala_batch_dt=`date +"%Y-%m-%d"`
+export yesterday_impala_extract_dt=`date -d '-1 day' +"%Y-%m-%d"`
 
 export output_dir=`dirname ${0}`/Output/
 
@@ -113,8 +114,6 @@ extract_yarn_appls() {
 
     appdump=YarnApplicationDump_$curr_date.json
     eval $activerm_url$rmapps >  $yarn_out_dir$appdump
-    
-    exit 
 
 }
 
@@ -174,6 +173,14 @@ extract_yarn() {
     fi
 
 }
+
+
+
+
+###########################################
+### Ambari Blueprint Extract 
+###########################################
+
 
 extract_ambari_bp() { 
     echo " Extracting Ambari Blueprint .. "
@@ -253,6 +260,7 @@ extract_hdp() {
 
     check_kerberos
     extract_yarn
+  
 
     if [ "$INITIAL_EXEC" == "Y" ]; then 
         ambari_out_dir=$output_dir/AMBARI/
@@ -274,6 +282,37 @@ extract_hdp() {
 }
 
 
+### Extract Cloudera Manager Timeseries data for Usage, Roles, HDFS Usage and other Metrics
+
+extract_cm_timeseries() {
+
+    cmHostRoles="$CURL -X GET -u $CM_ADMIN_USER:$CM_ADMIN_PASSWORD $http$CM_SERVER_URL:$CM_SERVER_PORT/api/$CM_API_VERSION/timeseries?query=select%20*%20where%20category=ROLE"
+    cmHDFSUsage="$CURL -X GET -u $CM_ADMIN_USER:$CM_ADMIN_PASSWORD $http$CM_SERVER_URL:$CM_SERVER_PORT/api/$CM_API_VERSION/timeseries?query=SELECT%20dfs_capacity,dfs_capacity_used,dfs_capacity_free,dfs_capacity_used_non_hdfs,dfs_capacity_across_datanodes,dfs_capacity_used_across_datanodes,dfs_capacity_used_non_hdfs_across_datanodes"
+ 
+    cm_extract_curr_date=`date +"%Y-%m-%d"`
+    cm_extract_start_date=`date -d '-1 month' +"%Y-%m-%d"`
+
+    cmYarnUtilization="$CURL -X GET -u $CM_ADMIN_USER:$CM_ADMIN_PASSWORD '$http$CM_SERVER_URL:$CM_SERVER_PORT/api/$CM_API_VERSION/timeseries?desiredRollup=DAILY&from=$cm_extract_start_date&to=$cm_extract_curr_date&query=select%20allocated_memory_mb_cumulative,available_memory_mb,allocated_memory_gb,available_memory_mb,available_vcores,allocated_vcores,allocated_vcores_cumulative'"
+    cmYarnMemCpu="$CURL -X GET -u $CM_ADMIN_USER:$CM_ADMIN_PASSWORD '$http$CM_SERVER_URL:$CM_SERVER_PORT/api/$CM_API_VERSION/timeseries?desiredRollup=DAILY&from=$cm_extract_start_date&to=$cm_extract_curr_date&query=SELECT%20yarn_reports_containers_used_vcores,total_allocated_vcores_across_yarn_pools+total_available_vcores_across_yarn_pools%20as%20vcores_available,yarn_reports_containers_used_memory,total_available_memory_mb_across_yarn_pools+total_allocated_memory_mb_across_yarn_pools%20as%20memory_available'"
+    cmImpalaUtilization="$CURL -X GET -u $CM_ADMIN_USER:$CM_ADMIN_PASSWORD '$http$CM_SERVER_URL:$CM_SERVER_PORT/api/$CM_API_VERSION/timeseries?desiredRollup=DAILY&from=$cm_extract_start_date&to=$cm_extract_curr_date&query=select%20impala_query_thread_cpu_time_rate,impala_query_admission_wait_rate,impala_query_query_duration_rate,impala_query_memory_accrual_rate,total_mem_tracker_process_limit_across_impalads,total_impala_admission_controller_local_backend_mem_reserved_across_impala_daemon_pools,total_impala_admission_controller_local_backend_mem_usage_across_impala_daemon_pools%20WHERE%20category=CLUSTER'"
+
+    cm_HostRoles=cmHostRoles_$curr_date.json
+    cm_HDFSUsage=cmHDFSUsage_$curr_date.json
+
+    cm_YarnUtlization=cmYarnUtiliation_$curr_date.json
+    cm_Yarn_MemCPU=cmYarnMemoryAndCPU_$curr_date.json
+    cm_ImpalaUtilization=cmImpalaUtilization_$curr_date.json
+
+    eval $cmHostRoles > $CM_out_dir$cm_HostRoles
+    eval $cmHDFSUsage > $CM_out_dir$cm_HDFSUsage
+
+    eval $cmYarnUtilization > $CM_out_dir$cm_YarnUtlization
+    eval $cmYarnMemCpu > $CM_out_dir$cm_Yarn_MemCPU
+    eval $cmImpalaUtilization > $CM_out_dir$cm_ImpalaUtilization
+
+}
+
+
 ###########################################
 ### Extract CDP Logs
 ###########################################
@@ -291,7 +330,9 @@ extract_cm_info() {
         http="http://"
     fi 
 
+    ###########################################
     ### Cloudera Manager Metrics
+    ###########################################
 
     CM_CLUSTER=`echo $CM_CLUSTER | sed 's/ /%20/g'` 
 
@@ -309,6 +350,12 @@ extract_cm_info() {
     eval $cmhost > $CM_out_dir$cm_hosts
     eval $cmconfig > $CM_out_dir$cm_config
     eval $cmexport > $CM_out_dir$cm_export 
+
+    ###########################################
+    #### Extract Cloudera TimeSeries metrics 
+    ###########################################
+
+    extract_cm_timeseries 
 
 }
 
@@ -342,8 +389,8 @@ extract_impala() {
     if [ "$INITIAL_EXEC" == "Y" ]; then 
        dates=($CM_IMPALA_EXTRACT_DATES)
     else 
-       echo "Running in Scheduled mode ... using $curr_impala_batch_dt for the extract"
-       dates=($curr_impala_batch_dt)
+       echo "Running in Scheduled mode ... using $yesterday_impala_extract_dt and  $curr_impala_batch_dt for the extract"
+       dates=($yesterday_impala_extract_dt $curr_impala_batch_dt)
     fi
 
     echo $dates
@@ -354,7 +401,7 @@ extract_impala() {
 	  do
 	    for OFFSET in 0 1000 2000 3000 4000 5000
 	    do
-	       URL_FILTER="$BASE_URL?from=${DAY}T${HOUR}%3A00%3A00.000Z&to=${DAY}T${HOUR}%3A23%3A59.999Z&filter=&limit=1000&offset=$OFFSET"
+	       URL_FILTER="$BASE_URL?from=${DAY}T${HOUR}%3A00%3A00.000Z&to=${DAY}T${HOUR}%3A59%3A59.999Z&filter=&limit=1000&offset=$OFFSET"
 	       echo "extracting $URL_FILTER"
 	       #curl --insecure -v -u ${CM_ADMIN_USER}:${CM_ADMIN_PASSWORD} $URL_FILTER > impala_${DAY}_${HOUR}_${OFFSET}.json
 	      
@@ -382,7 +429,7 @@ extract_cdp() {
     fi
 
     ## Extracting Impala 
-    extract_impala
+    ##extract_impala
 
     echo " #################################################################################################################"
     echo " NOTE: This is an Initial Extract.  Please inspect the files to:                                                  " 
@@ -397,7 +444,7 @@ extract_other_oss() {
 
     check_kerberos
     extract_yarn
-
+ 
     echo " ####################################################################################################"
     echo " NOTE: This is an Initial Extract. Please inspect the files to make sure the extracts are fine .... "
     echo " ####################################################################################################"
@@ -419,7 +466,7 @@ if [ "$DISTRIBUTION" == "HDP" ]; then
       echo " Distribution is Hortonworks. About to Extact ... "       
       extract_hdp
 
-else if [ "$DISTRIBUTION" == "CDP" ]; then 
+else if [ "$DISTRIBUTION" == "CDH" ]; then 
       echo " Distribtuion is Cloudera . Starting Extract ... " 
       extract_cdp
 
