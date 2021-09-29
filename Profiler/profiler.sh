@@ -427,9 +427,12 @@ extract_cdp() {
        #extract_sentry_policies
 
     fi
-
+   
+    ####################################
     ## Extracting Impala 
-    ##extract_impala
+    ####################################
+
+    extract_impala
 
     echo " #################################################################################################################"
     echo " NOTE: This is an Initial Extract.  Please inspect the files to:                                                  " 
