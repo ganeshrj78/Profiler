@@ -286,7 +286,7 @@ extract_hdp() {
 
 extract_cm_timeseries() {
 
-    cmHostRoles="$CURL -X GET -u $CM_ADMIN_USER:$CM_ADMIN_PASSWORD $http$CM_SERVER_URL:$CM_SERVER_PORT/api/$CM_API_VERSION/timeseries?query=select%20*%20where%20category=ROLE"
+    cmHostRoles="$CURL -X GET -u $CM_ADMIN_USER:$CM_ADMIN_PASSWORD $http$CM_SERVER_URL:$CM_SERVER_PORT/api/$CM_API_VERSION/timeseries?query=select%20scm_role_state,uptime%20where%20category=ROLE"
     cmHDFSUsage="$CURL -X GET -u $CM_ADMIN_USER:$CM_ADMIN_PASSWORD $http$CM_SERVER_URL:$CM_SERVER_PORT/api/$CM_API_VERSION/timeseries?query=SELECT%20dfs_capacity,dfs_capacity_used,dfs_capacity_free,dfs_capacity_used_non_hdfs,dfs_capacity_across_datanodes,dfs_capacity_used_across_datanodes,dfs_capacity_used_non_hdfs_across_datanodes"
  
     cm_extract_curr_date=`date +"%Y-%m-%d"`
