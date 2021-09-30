@@ -202,7 +202,7 @@ After initial extraction, we recommend running the script daily for at least 2 w
 </tr>
 <tr>
 <td>
-<p><span style="font-weight: 400;">CM_IMPALA_INTERNAL_MINUTES</span></p>
+<p><span style="font-weight: 400;">CM_IMPALA_INTERVAL_MINUTES</span></p>
 </td>
 <td>
 <p><span style="font-weight: 400;">Number of minutes per json file extracted, options are 1, 2, 3, 6, 10, 20, 30, 60</span></p>
