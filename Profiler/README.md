@@ -4,13 +4,13 @@
 
 ### 1. YARN Application execution, Host , metrics and Scheduler Information
 
-### 2. If the Distribution is HDP, then extract contains
+### 2. If the Distribution is CDH, then extract contains
+####     -  the Services, host and components from Cloudera Manager (CM)
+####     -  Impala logs based on the input dates 
+
+### 3. If the Distribution is HDP, then extract contains
 ####     -  the blueprint, Service, hosts and host components from Ambari
 ####     -  Ranger policies and Repos if Ranger is Used
-
-### 3. If the Distribution is CDH, then extract contains
-####     -  the Services, host and components from CM  
-####     -  Impala logs based on the input dates 
 
 ### 4. If the Distribution is neither CDH or HDP (i.e. OTH), then only YARN Metrics will be extracted
 
@@ -134,6 +134,88 @@ After initial extraction, we recommend running the script daily for at least 2 w
 <p><span style="font-weight: 400;">On-Prem Distribution : HDP or CDH or OTH&nbsp;</span></p>
 </td>
 </tr>
+<td rowspan="10">
+<p><span style="font-weight: 400;">Cloudera Manager and Impala&nbsp; Related Configurations if the distribution is CDH</span></p>
+</td>
+<td>
+<p><span style="font-weight: 400;">CM_SERVER_URL</span></p>
+</td>
+<td>
+<p><span style="font-weight: 400;">Cloudera Manager URL&nbsp;</span></p>
+</td>
+</tr>
+<tr>
+<td>
+<p><span style="font-weight: 400;">CM_SERVER_PORT</span></p>
+</td>
+<td>
+<p><span style="font-weight: 400;">Cloudera Manager Port&nbsp;</span></p>
+</td>
+</tr>
+<tr>
+<td>
+<p><span style="font-weight: 400;">CM_ADMIN_USER</span></p>
+</td>
+<td>
+<p><span style="font-weight: 400;">Cloudera Manager Admin User</span></p>
+</td>
+</tr>
+<tr>
+<td>
+<p><span style="font-weight: 400;">CM_ADMIN_PASSWORD</span></p>
+</td>
+<td>
+<p><span style="font-weight: 400;">Cloudera Manager Password&nbsp;</span></p>
+</td>
+</tr>
+<tr>
+<td>
+<p><span style="font-weight: 400;">CM_CLUSTER</span></p>
+</td>
+<td>
+<p><span style="font-weight: 400;">Cloudera Manager Cluster Name&nbsp;</span></p>
+</td>
+</tr>
+<tr>
+<td>
+<p><span style="font-weight: 400;">CM_API_VERSION</span></p>
+</td>
+<td>
+<p><span style="font-weight: 400;">Cloudera Manager API Version. Can be Obtained from CM UI. Click &ldquo;Support&rdquo; and &ldquo;API Documentation&rdquo;.&nbsp; API Version number should be available on this page (like v00)</span></p>
+</td>
+</tr>
+<tr>
+<td>
+<p><span style="font-weight: 400;">CM_SECURED</span></p>
+</td>
+<td>
+<p><span style="font-weight: 400;">Is https enabled for Cloudera Manager (Y/N)</span></p>
+</td>
+</tr>
+<tr>
+<td>
+<p><span style="font-weight: 400;">CM_IMPALA_NUMBER_OF_DAYS</span></p>
+</td>
+<td>
+<p><span style="font-weight: 400;">Number of days for initial extraction</span></p>
+</td>
+</tr>
+<tr>
+<td>
+<p><span style="font-weight: 400;">CM_IMPALA_INTERNAL_MINUTES</span></p>
+</td>
+<td>
+<p><span style="font-weight: 400;">Number of minutes per json file extracted, options are 1, 2, 3, 6, 10, 20, 30, 60</span></p>
+</td>
+</tr><tr>
+<td>
+<p><span style="font-weight: 400;">CM_IMPALA_PAGES</span></p>
+</td>
+<td>
+<p><span style="font-weight: 400;">Number of pages to be extracted per file (interval), cloudera manager limits 1000 queries per page&nbsp;</span></p>
+</td>
+</tr>
+
 <tr>
 <td rowspan="12">
 <p><span style="font-weight: 400;">Ambari and Ranger Related Configurations if the distribution is HDP&nbsp;</span></p>
@@ -234,98 +316,19 @@ After initial extraction, we recommend running the script daily for at least 2 w
 </td>
 </tr>
 <tr>
-<td rowspan="10">
-<p><span style="font-weight: 400;">Cloudera Manager and Impala&nbsp; Related Configurations if the distribution is CDH</span></p>
-</td>
-<td>
-<p><span style="font-weight: 400;">CM_SERVER_URL</span></p>
-</td>
-<td>
-<p><span style="font-weight: 400;">Cloudera Manager URL&nbsp;</span></p>
-</td>
-</tr>
-<tr>
-<td>
-<p><span style="font-weight: 400;">CM_SERVER_PORT</span></p>
-</td>
-<td>
-<p><span style="font-weight: 400;">Cloudera Manager Port&nbsp;</span></p>
-</td>
-</tr>
-<tr>
-<td>
-<p><span style="font-weight: 400;">CM_ADMIN_USER</span></p>
-</td>
-<td>
-<p><span style="font-weight: 400;">Cloudera Manager Admin User</span></p>
-</td>
-</tr>
-<tr>
-<td>
-<p><span style="font-weight: 400;">CM_ADMIN_PASSWORD</span></p>
-</td>
-<td>
-<p><span style="font-weight: 400;">Cloudera Manager Password&nbsp;</span></p>
-</td>
-</tr>
-<tr>
-<td>
-<p><span style="font-weight: 400;">CM_CLUSTER</span></p>
-</td>
-<td>
-<p><span style="font-weight: 400;">Cloudera Manager Cluster Name&nbsp;</span></p>
-</td>
-</tr>
-<tr>
-<td>
-<p><span style="font-weight: 400;">CM_API_VERSION</span></p>
-</td>
-<td>
-<p><span style="font-weight: 400;">Cloudera Manager API Version. Can be Obtained from CM UI. Click &ldquo;Support&rdquo; and &ldquo;API Documentation&rdquo;.&nbsp; API Version number should be available on this page (like v00)</span></p>
-</td>
-</tr>
-<tr>
-<td>
-<p><span style="font-weight: 400;">CM_SECURED</span></p>
-</td>
-<td>
-<p><span style="font-weight: 400;">Is https enabled for Cloudera Manager (Y/N)</span></p>
-</td>
-</tr>
-<tr>
-<td>
-<p><span style="font-weight: 400;">CM_IMPALA_URL</span></p>
-</td>
-<td>
-<p><span style="font-weight: 400;">URL for Impala. Same as Cloudera manager URL&nbsp;</span></p>
-</td>
-</tr>
-<tr>
-<td>
-<p><span style="font-weight: 400;">CM_IMPALA_EXTRACT_DATES</span></p>
-</td>
-<td>
-<p><span style="font-weight: 400;">Range of dates separated by spaces&nbsp;</span></p>
-<p><span style="font-weight: 400;">Example: </span><span style="font-weight: 400;">"2021-08-25 2021-08-26 2021-08-27 2021-08-28 2021-08-29"</span></p>
-</td>
-</tr>
-<tr>
-<td>
-<p><span style="font-weight: 400;">CM_IMPALA_SERVICE</span></p>
-</td>
-<td>
-<p><span style="font-weight: 400;">Service name for Impala. Can be obtained from CM.&nbsp;</span></p>
-</td>
-</tr>
 </tbody>
 </table>
 
 # How to Run: 
 
+## Initial Extraction (INITIAL_EXEC=Y):
 ### 1. git clone https://github.com/ganeshrj78/Profiler.git
 ### 2. cd Profiler/Profiler 
 ### 3. chmod +x profiler.sh 
 ### 4. ./profiler.sh 
+
+## Daily extraction (INITIAL_EXEC=N)
+### schedule profiler.sh to run daily for at least 2 weeks
 
 # Output: 
 
