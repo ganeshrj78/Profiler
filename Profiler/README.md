@@ -327,7 +327,7 @@ After initial extraction, we recommend running the script daily for at least 2 w
 ### 3. chmod +x profiler.sh 
 ### 4. ./profiler.sh 
 
-# Daily extraction (INITIAL_EXEC=N)
+## Daily extraction (INITIAL_EXEC=N)
 ### schedule profiler.sh to run daily for at least 2 weeks
 
 # Output: 
