@@ -22,7 +22,6 @@
 ## Init Variables 
 
 export curr_date=`date +"%Y%m%d_%H%M%S"`
-export curr_impala_batch_dt=`date +"%Y-%m-%d"`
 export yesterday_impala_extract_dt=`date -d '-1 day' +"%Y-%m-%d"`
 
 export output_dir=`dirname ${0}`/Output/
@@ -293,7 +292,7 @@ extract_cm_timeseries() {
     cm_extract_start_date=`date -d '-1 month' +"%Y-%m-%d"`
 
     cmYarnUtilization="$CURL -X GET -u $CM_ADMIN_USER:$CM_ADMIN_PASSWORD '$http$CM_SERVER_URL:$CM_SERVER_PORT/api/$CM_API_VERSION/timeseries?desiredRollup=DAILY&from=$cm_extract_start_date&to=$cm_extract_curr_date&query=select%20allocated_memory_mb_cumulative,available_memory_mb,allocated_memory_gb,available_memory_mb,available_vcores,allocated_vcores,allocated_vcores_cumulative'"
-    cmYarnMemCpu="$CURL -X GET -u $CM_ADMIN_USER:$CM_ADMIN_PASSWORD '$http$CM_SERVER_URL:$CM_SERVER_PORT/api/$CM_API_VERSION/timeseries?desiredRollup=DAILY&from=$cm_extract_start_date&to=$cm_extract_curr_date&query=SELECT%20yarn_reports_containers_used_vcores,total_allocated_vcores_across_yarn_pools+total_available_vcores_across_yarn_pools%20as%20vcores_available,yarn_reports_containers_used_memory,total_available_memory_mb_across_yarn_pools+total_allocated_memory_mb_across_yarn_pools%20as%20memory_available'"
+    cmYarnMemCpu="$CURL -X GET -u $CM_ADMIN_USER:$CM_ADMIN_PASSWORD '$http$CM_SERVER_URL:$CM_SERVER_PORT/api/$CM_API_VERSION/timeseries?desiredRollup=DAILY&from=$cm_extract_start_date&to=$cm_extract_curr_date&query=SELECT%20yarn_reports_containers_used_vcores,total_allocated_vcores_across_yarn_pools,total_available_vcores_across_yarn_pools%20as%20vcores_available,yarn_reports_containers_used_memory,total_available_memory_mb_across_yarn_pools,total_allocated_memory_mb_across_yarn_pools%20as%20memory_available'"
     cmImpalaUtilization="$CURL -X GET -u $CM_ADMIN_USER:$CM_ADMIN_PASSWORD '$http$CM_SERVER_URL:$CM_SERVER_PORT/api/$CM_API_VERSION/timeseries?desiredRollup=DAILY&from=$cm_extract_start_date&to=$cm_extract_curr_date&query=select%20impala_query_thread_cpu_time_rate,impala_query_admission_wait_rate,impala_query_query_duration_rate,impala_query_memory_accrual_rate,total_mem_tracker_process_limit_across_impalads,total_impala_admission_controller_local_backend_mem_reserved_across_impala_daemon_pools,total_impala_admission_controller_local_backend_mem_usage_across_impala_daemon_pools%20WHERE%20category=CLUSTER'"
 
     cm_HostRoles=cmHostRoles_$curr_date.json
@@ -381,38 +380,56 @@ extract_impala() {
     CM_CLUSTER=`echo $CM_CLUSTER | sed 's/ /%20/g'` 
     BASE_URL="$http$CM_SERVER_URL:$CM_SERVER_PORT/api/$CM_API_VERSION/clusters/$CM_CLUSTER/services/$CM_IMPALA_SERVICE/impalaQueries"
 
-    #not using date range becuase date commands are different in linux and osx
-    ####echo $CM_IMPALA_EXTRACT_DATES
-    ####dates=($CM_IMPALA_EXTRACT_DATES)
-
-
     if [ "$INITIAL_EXEC" == "Y" ]; then 
-       dates=($CM_IMPALA_EXTRACT_DATES)
+       dates=()
+       for NUMBER_DAYS in $(seq -w 0 $CM_IMPALA_NUMBER_OF_DAYS)
+       do
+          dates+=($(date -d "-$NUMBER_DAYS  day" +"%Y-%m-%d"))
+       done
     else 
-       echo "Running in Scheduled mode ... using $yesterday_impala_extract_dt and  $curr_impala_batch_dt for the extract"
-       dates=($yesterday_impala_extract_dt $curr_impala_batch_dt)
+       echo "Running in Scheduled mode ... using $yesterday_impala_extract_dt for the extract"
+       dates=($yesterday_impala_extract_dt)
     fi
 
-    echo $dates
-    
     for DAY in "${dates[@]}"
-	do
-	  for HOUR in $(seq -w 0 23)
-	  do
-	    for OFFSET in 0 1000 2000 3000 4000 5000
-	    do
-	       URL_FILTER="$BASE_URL?from=${DAY}T${HOUR}%3A00%3A00.000Z&to=${DAY}T${HOUR}%3A59%3A59.999Z&filter=&limit=1000&offset=$OFFSET"
-	       echo "extracting $URL_FILTER"
-	       #curl --insecure -v -u ${CM_ADMIN_USER}:${CM_ADMIN_PASSWORD} $URL_FILTER > impala_${DAY}_${HOUR}_${OFFSET}.json
-	      
-	       cmimpala="$CURL -X GET -u ${CM_ADMIN_USER}:${CM_ADMIN_PASSWORD} $URL_FILTER"
+    do
+      for HOUR in $(seq -w 0 23)
+      do
+        INTERVALS=$(((60 / $CM_IMPALA_INTERNAL_MINUTES)-1))
+        for RANGE in $(seq -w 0 $INTERVALS)
+        do
+          MINUTE_START=$(($RANGE * $CM_IMPALA_INTERNAL_MINUTES))
+          if [ $MINUTE_START -lt 10 ]
+          then
+            MINUTE_START="0${MINUTE_START}"
+          fi
+          MINUTE_END=$(((($RANGE + 1) * $CM_IMPALA_INTERNAL_MINUTES) - 1))
+          if [ $MINUTE_END -lt 10 ]
+          then
+            MINUTE_END="0${MINUTE_END}"
+          fi
+          PAGES=$(($CM_IMPALA_PAGES - 1))
+          for PAGE in $(seq -w 0 $PAGES)
+          do
+             OFFSET=$(($PAGE * 1000))
+             URL_FILTER="$BASE_URL?from=${DAY}T${HOUR}%3A${MINUTE_START}%3A00.000Z&to=${DAY}T${HOUR}%3A${MINUTE_END}%3A59.999Z&filter=&limit=1000&offset=$OFFSET"
+             echo "extracting $URL_FILTER"
 
- 	       cm_impalaext=impala_${DAY}_${HOUR}_${OFFSET}.json
-	       eval $cmimpala > $IMPALA_out_dir$cm_impalaext
+             cmimpala="$CURL -X GET -u ${CM_ADMIN_USER}:${CM_ADMIN_PASSWORD} $URL_FILTER"
 
-	    done
-	  done
+             cm_impalaext=impala_${DAY}_${HOUR}_${MINUTE_START}_${MINUTE_END}_${OFFSET}.json
+             eval $cmimpala > $IMPALA_out_dir$cm_impalaext
+             #echo $IMPALA_out_dir$cm_impalaext
+          done
+        done
+      done
     done
+
+    if grep -q "Impala query scan limit reached" $IMPALA_out_dir/*.json; then
+      echo -e "\n\n\n\n\n\n\n********************************"
+      echo "IMPALA QUERY SCAN LIMIT HIT, PLEASE REDUCE CM_IMPALA_INTERNAL_MINUTES AND INCREASE CM_IMPALA_PAGES"
+      echo -e "********************************\n\n\n\n\n\n\n\n\n"
+    fi
   
 }
 
