@@ -5,7 +5,7 @@
 ### 1. YARN Application execution, Host , metrics and Scheduler Information
 
 ### 2. If the Distribution is CDH, then extract contains
-####     -  the Services, host and components from CM  
+####     -  the Services, host and components from Cloudera Manager (CM)
 ####     -  Impala logs based on the input dates 
 
 ### 3. If the Distribution is HDP, then extract contains
