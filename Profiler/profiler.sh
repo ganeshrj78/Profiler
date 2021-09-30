@@ -39,7 +39,7 @@ export rmnodes='/ws/v1/cluster/nodes'
 check_kerberos()  { 
 
     if [ "$RM_SECURE" == "Y" ]; then 
-        CURL="$CURL -k"
+        CURL="$CURL -k "
         http="https://"
     else 
         CURL="$CURL " 
@@ -396,7 +396,7 @@ extract_impala() {
       for HOUR in $(seq -w 0 23)
       do
         INTERVALS=$(((60 / $CM_IMPALA_INTERNAL_MINUTES)-1))
-        for RANGE in $(seq -w 0 $INTERVALS)
+        for RANGE in $(seq 0 $INTERVALS)
         do
           MINUTE_START=$(($RANGE * $CM_IMPALA_INTERNAL_MINUTES))
           if [ $MINUTE_START -lt 10 ]
@@ -415,7 +415,7 @@ extract_impala() {
              URL_FILTER="$BASE_URL?from=${DAY}T${HOUR}%3A${MINUTE_START}%3A00.000Z&to=${DAY}T${HOUR}%3A${MINUTE_END}%3A59.999Z&filter=&limit=1000&offset=$OFFSET"
              echo "extracting $URL_FILTER"
 
-             cmimpala="$CURL -X GET -u ${CM_ADMIN_USER}:${CM_ADMIN_PASSWORD} $URL_FILTER"
+             cmimpala="$CURL -X GET -u ${CM_ADMIN_USER}:${CM_ADMIN_PASSWORD} '$URL_FILTER'"
 
              cm_impalaext=impala_${DAY}_${HOUR}_${MINUTE_START}_${MINUTE_END}_${OFFSET}.json
              eval $cmimpala > $IMPALA_out_dir$cm_impalaext
