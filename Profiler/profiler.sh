@@ -395,15 +395,15 @@ extract_impala() {
     do
       for HOUR in $(seq -w 0 23)
       do
-        INTERVALS=$(((60 / $CM_IMPALA_INTERNAL_MINUTES)-1))
+        INTERVALS=$(((60 / $CM_IMPALA_INTERVAL_MINUTES)-1))
         for RANGE in $(seq 0 $INTERVALS)
         do
-          MINUTE_START=$(($RANGE * $CM_IMPALA_INTERNAL_MINUTES))
+          MINUTE_START=$(($RANGE * $CM_IMPALA_INTERVAL_MINUTES))
           if [ $MINUTE_START -lt 10 ]
           then
             MINUTE_START="0${MINUTE_START}"
           fi
-          MINUTE_END=$(((($RANGE + 1) * $CM_IMPALA_INTERNAL_MINUTES) - 1))
+          MINUTE_END=$(((($RANGE + 1) * $CM_IMPALA_INTERVAL_MINUTES) - 1))
           if [ $MINUTE_END -lt 10 ]
           then
             MINUTE_END="0${MINUTE_END}"
@@ -427,7 +427,7 @@ extract_impala() {
 
     if grep -q "Impala query scan limit reached" $IMPALA_out_dir/*.json; then
       echo -e "\n\n\n\n\n\n\n********************************"
-      echo "IMPALA QUERY SCAN LIMIT HIT, PLEASE REDUCE CM_IMPALA_INTERNAL_MINUTES AND INCREASE CM_IMPALA_PAGES"
+      echo "IMPALA QUERY SCAN LIMIT HIT, PLEASE REDUCE CM_IMPALA_INTERVAL_MINUTES AND INCREASE CM_IMPALA_PAGES"
       echo -e "********************************\n\n\n\n\n\n\n\n\n"
     fi
   
