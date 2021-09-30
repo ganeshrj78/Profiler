@@ -4,13 +4,13 @@
 
 ### 1. YARN Application execution, Host , metrics and Scheduler Information
 
-### 2. If the Distribution is HDP, then extract contains
-####     -  the blueprint, Service, hosts and host components from Ambari
-####     -  Ranger policies and Repos if Ranger is Used
-
-### 3. If the Distribution is CDH, then extract contains
+### 2. If the Distribution is CDH, then extract contains
 ####     -  the Services, host and components from CM  
 ####     -  Impala logs based on the input dates 
+
+### 3. If the Distribution is HDP, then extract contains
+####     -  the blueprint, Service, hosts and host components from Ambari
+####     -  Ranger policies and Repos if Ranger is Used
 
 ### 4. If the Distribution is neither CDH or HDP (i.e. OTH), then only YARN Metrics will be extracted
 
