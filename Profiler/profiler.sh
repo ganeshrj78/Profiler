@@ -22,6 +22,8 @@
 ## Init Variables 
 
 export curr_date=`date +"%Y%m%d_%H%M%S"`
+export extract_date=`date +"%Y-%m-%d"`
+
 export yesterday_impala_extract_dt=`date -d '-1 day' +"%Y-%m-%d"`
 
 export output_dir=`dirname ${0}`/Output/
@@ -50,17 +52,15 @@ check_kerberos()  {
 
         echo " Kerberos is set as True. Make sure to Kinit before executing the script. Current Credential Cache is ... "
         eval klist
-        echo "                                                                   " 
+        echo "\n"
 
-	if [ "$GOT_KEYTAB" == "Y" ]; then 
-	    echo " Initializing with Keytab provided ..... " 
-	    kinit="kinit -kt $KEYTAB_PATH/$KEYTAB $PRINCIPAL"
-	    eval $kinit
+        if [ "$GOT_KEYTAB" == "Y" ]; then 
+            echo " Initializing with Keytab provided ..... " 
+            kinit="kinit -kt $KEYTAB_PATH/$KEYTAB $PRINCIPAL"
+            eval $kinit
             eval klist
-
-	#else 
-            #echo " Press Enter to Continue or Ctrl+C to cancel  .... "
-            #read input
+                #echo " Press Enter to Continue or Ctrl+C to cancel  .... "
+                #read input
         fi 
 
         ## Patch up Kerberos URL 
@@ -157,7 +157,7 @@ extract_yarn_scheduler()  {
 ###############################################################
 extract_yarn() { 
 
-    yarn_out_dir=$output_dir/YARN/
+    yarn_out_dir=$output_dir/YARN/$extract_date/
     mkdir -p $yarn_out_dir
 
     check_active_rm
@@ -173,7 +173,68 @@ extract_yarn() {
 
 }
 
+###############################################################
+### Extract SPARK  Logs 
+### - Applications, Executors and Environment Variables 
+###############################################################
 
+extract_spark_logs() { 
+
+    SPARK_out_dir=$output_dir/SPARK/$extract_date/
+    mkdir -p $SPARK_out_dir
+
+    if [ "$SPARK_HS_SECURE" == "Y" ]; then 
+        CURL="$CURL -k "
+        http="https://"
+    else 
+        CURL="$CURL " 
+        http="http://"
+    fi 
+
+    if [ "$SPARK_HS_KERBERIZED" == "Y" ]; then
+
+        echo " Kerberos is set as True. Make sure to Kinit before executing the script. Current Credential Cache is ... "
+        eval klist
+        echo "                                                                   " 
+
+        ## Patch up Kerberos URL 
+        sparkurl=$(echo $CURL$kerburl$http)
+    else 
+        ## Patch up Kerberos URL 
+        sparkurl=$(echo $CURL$http)
+    fi
+
+    cm_extract_curr_date=`date +"%Y-%m-%d"`
+    cm_extract_start_date=`date -d '-1 month' +"%Y-%m-%d"`
+
+
+    if [ "$INITIAL_EXEC" == "Y" ]; then 
+         extract_start_date=`date -d '-1 month' +"%Y-%m-%d"`
+    else 
+         extract_start_date=`date -d '-1 day' +"%Y-%m-%d"`
+    fi
+
+    #extract_start_date="2020-01-01"
+    
+    sparkHSapps=$sparkurl$SPARK_HS_URL:$SPARK_HS_PORT/api/v1/applications?minDate=$extract_start_date
+    sparkHSlist=`$sparkurl$SPARK_HS_URL:$SPARK_HS_PORT/api/v1/applications?minDate=$extract_start_date |grep id | cut -f2 -d":" |sed -e 's/"//g' | sed -e 's/,//g'`
+
+    sparkApps=Spark_Applications_$curr_date.json
+      
+    eval $sparkHSapps  > $SPARK_out_dir$sparkApps
+       
+    for apps in $sparkHSlist;
+    do
+        echo $apps 
+        applEnv=$sparkurl$SPARK_HS_URL:$SPARK_HS_PORT/api/v1/applications/$apps/environment
+        applExec=$sparkurl$SPARK_HS_URL:$SPARK_HS_PORT/api/v1/applications/$apps/executors
+
+        eval  $applEnv > ${SPARK_out_dir}${apps}_env.json
+        eval  $applExec > ${SPARK_out_dir}${apps}_executors.json
+    done
+      
+    
+} 
 
 
 ###########################################
@@ -185,7 +246,7 @@ extract_ambari_bp() {
     echo " Extracting Ambari Blueprint .. "
 
     if [ $AMBARI_SECURED == "Y" ]; then 
-        CURL="$CURL -k"
+        CURL="$CURL -k "
         http="https://"
     else 
         CURL="$CURL " 
@@ -235,7 +296,7 @@ extract_ambari_bp() {
 extract_ranger_policies() { 
  
     if [ "$RANGER_SECURED" == "Y" ]; then
-        CURL="$CURL -k"
+        CURL="$CURL -k "
         http="https://"
     else
         CURL="$CURL "
@@ -253,23 +314,24 @@ extract_ranger_policies() {
 
 }
 
-
-
 extract_hdp() { 
 
     check_kerberos
     extract_yarn
-  
+
+    if [ "$SPARK_EXTRACT" == "Y" ]; then 
+        extract_spark_logs
+    fi  
 
     if [ "$INITIAL_EXEC" == "Y" ]; then 
-        ambari_out_dir=$output_dir/AMBARI/
+        ambari_out_dir=$output_dir/AMBARI/$extract_date/
         mkdir -p $ambari_out_dir
 
        extract_ambari_bp
       
 
        if [ "$IS_RANGER_SETUP" == "Y" ]; then
-            ranger_out_dir=$output_dir/RANGER/
+            ranger_out_dir=$output_dir/RANGER/$extract_date/
             mkdir -p $ranger_out_dir
             extract_ranger_policies
        fi 
@@ -279,7 +341,6 @@ extract_hdp() {
     fi
 
 }
-
 
 ### Extract Cloudera Manager Timeseries data for Usage, Roles, HDFS Usage and other Metrics
 
@@ -291,14 +352,14 @@ extract_cm_timeseries() {
     cm_extract_curr_date=`date +"%Y-%m-%d"`
     cm_extract_start_date=`date -d '-1 month' +"%Y-%m-%d"`
 
-    cmYarnUtilization="$CURL -X GET -u $CM_ADMIN_USER:$CM_ADMIN_PASSWORD '$http$CM_SERVER_URL:$CM_SERVER_PORT/api/$CM_API_VERSION/timeseries?desiredRollup=HOURLY&from=$cm_extract_start_date&to=$cm_extract_curr_date&query=select%20allocated_memory_mb_cumulative,available_memory_mb,allocated_memory_gb,available_memory_mb,available_vcores,allocated_vcores,allocated_vcores_cumulative'"
-    cmYarnMemCpu="$CURL -X GET -u $CM_ADMIN_USER:$CM_ADMIN_PASSWORD '$http$CM_SERVER_URL:$CM_SERVER_PORT/api/$CM_API_VERSION/timeseries?desiredRollup=HOURLY&from=$cm_extract_start_date&to=$cm_extract_curr_date&query=SELECT%20yarn_reports_containers_used_vcores,total_allocated_vcores_across_yarn_pools,total_available_vcores_across_yarn_pools%20as%20vcores_available,yarn_reports_containers_used_memory,total_available_memory_mb_across_yarn_pools,total_allocated_memory_mb_across_yarn_pools%20as%20memory_available'"
-    cmImpalaUtilization="$CURL -X GET -u $CM_ADMIN_USER:$CM_ADMIN_PASSWORD '$http$CM_SERVER_URL:$CM_SERVER_PORT/api/$CM_API_VERSION/timeseries?desiredRollup=HOURLY&from=$cm_extract_start_date&to=$cm_extract_curr_date&query=select%20impala_query_thread_cpu_time_rate,impala_query_admission_wait_rate,impala_query_query_duration_rate,impala_query_memory_accrual_rate,total_mem_tracker_process_limit_across_impalads,total_impala_admission_controller_local_backend_mem_reserved_across_impala_daemon_pools,total_impala_admission_controller_local_backend_mem_usage_across_impala_daemon_pools%20WHERE%20category=CLUSTER'"
+    cmYarnUtilization="$CURL -X GET -u $CM_ADMIN_USER:$CM_ADMIN_PASSWORD '$http$CM_SERVER_URL:$CM_SERVER_PORT/api/$CM_API_VERSION/timeseries?desiredRollup=HOURLY&mustUseDesiredRollup=true&from=$cm_extract_start_date&to=$cm_extract_curr_date&query=select%20allocated_memory_mb_cumulative,available_memory_mb,allocated_memory_gb,available_memory_mb,available_vcores,allocated_vcores,allocated_vcores_cumulative'"
+    cmYarnMemCpu="$CURL -X GET -u $CM_ADMIN_USER:$CM_ADMIN_PASSWORD '$http$CM_SERVER_URL:$CM_SERVER_PORT/api/$CM_API_VERSION/timeseries?desiredRollup=HOURLY&mustUseDesiredRollup=true&from=$cm_extract_start_date&to=$cm_extract_curr_date&query=SELECT%20yarn_reports_containers_used_vcores,total_allocated_vcores_across_yarn_pools,total_available_vcores_across_yarn_pools%20as%20vcores_available,yarn_reports_containers_used_memory,total_available_memory_mb_across_yarn_pools,total_allocated_memory_mb_across_yarn_pools%20as%20memory_available'"
+    cmImpalaUtilization="$CURL -X GET -u $CM_ADMIN_USER:$CM_ADMIN_PASSWORD '$http$CM_SERVER_URL:$CM_SERVER_PORT/api/$CM_API_VERSION/timeseries?desiredRollup=HOURLY&mustUseDesiredRollup=true&from=$cm_extract_start_date&to=$cm_extract_curr_date&query=select%20impala_query_thread_cpu_time_rate,impala_query_admission_wait_rate,impala_query_query_duration_rate,impala_query_memory_accrual_rate,total_mem_tracker_process_limit_across_impalads,total_impala_admission_controller_local_backend_mem_reserved_across_impala_daemon_pools,total_impala_admission_controller_local_backend_mem_usage_across_impala_daemon_pools%20WHERE%20category=CLUSTER'"
 
     cm_HostRoles=cmHostRoles_$curr_date.json
     cm_HDFSUsage=cmHDFSUsage_$curr_date.json
 
-    cm_YarnUtlization=cmYarnUtiliation_$curr_date.json
+    cm_YarnUtilization=cmYarnUtiliation_$curr_date.json
     cm_Yarn_MemCPU=cmYarnMemoryAndCPU_$curr_date.json
     cm_ImpalaUtilization=cmImpalaUtilization_$curr_date.json
 
@@ -318,7 +379,7 @@ extract_cm_timeseries() {
 
 extract_cm_info() {
 
-    CM_out_dir=$output_dir/CM/
+    CM_out_dir=$output_dir/CM/$extract_date/
     mkdir -p $CM_out_dir
 
     if [ "$CM_SECURED" == "Y" ]; then 
@@ -366,11 +427,11 @@ extract_impala() {
 
     echo "Extracting Impala Queries " 
 
-    IMPALA_out_dir=$output_dir/IMPALA/
+    IMPALA_out_dir=$output_dir/IMPALA/$extract_date/
     mkdir -p $IMPALA_out_dir
 
     if [ "$CM_SECURED" == "Y" ]; then 
-        CURL="$CURL -k"
+        CURL="$CURL -k "
         http="https://"
     else 
         CURL="$CURL " 
@@ -433,10 +494,16 @@ extract_impala() {
   
 }
 
+
+
 extract_cdp() { 
 
     check_kerberos
     extract_yarn
+
+    if [ "$SPARK_EXTRACT" == "Y" ]; then 
+        extract_spark_logs
+    fi
     
     if [ "$INITIAL_EXEC" == "Y" ]; then 
        
