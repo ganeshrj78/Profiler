@@ -532,6 +532,10 @@ extract_other_oss() {
     check_kerberos
     extract_yarn
  
+    if [ "$SPARK_EXTRACT" == "Y" ]; then 
+        extract_spark_logs
+    fi  
+
     echo " ####################################################################################################"
     echo " NOTE: This is an Initial Extract. Please inspect the files to make sure the extracts are fine .... "
     echo " ####################################################################################################"
