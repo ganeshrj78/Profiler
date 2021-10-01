@@ -291,21 +291,21 @@ extract_cm_timeseries() {
     cm_extract_curr_date=`date +"%Y-%m-%d"`
     cm_extract_start_date=`date -d '-1 month' +"%Y-%m-%d"`
 
-    cmYarnUtilization="$CURL -X GET -u $CM_ADMIN_USER:$CM_ADMIN_PASSWORD '$http$CM_SERVER_URL:$CM_SERVER_PORT/api/$CM_API_VERSION/timeseries?desiredRollup=HOURLY&mustUseDesiredRollup=true&from=$cm_extract_start_date&to=$cm_extract_curr_date&query=select%20allocated_memory_mb_cumulative,available_memory_mb,allocated_memory_gb,available_memory_mb,available_vcores,allocated_vcores,allocated_vcores_cumulative'"
+    cmYarnUtilization="$CURL -X GET -u $CM_ADMIN_USER:$CM_ADMIN_PASSWORD '$http$CM_SERVER_URL:$CM_SERVER_PORT/api/$CM_API_VERSION/timeseries?desiredRollup=HOURLY&mustUseDesiredRollup=true&from=$cm_extract_start_date&to=$cm_extract_curr_date&query=select%20allocated_memory_mb,allocated_memory_mb_cumulative,available_memory_mb,allocated_memory_gb,available_memory_mb,available_vcores,allocated_vcores,allocated_vcores_cumulative'"
     cmYarnMemCpu="$CURL -X GET -u $CM_ADMIN_USER:$CM_ADMIN_PASSWORD '$http$CM_SERVER_URL:$CM_SERVER_PORT/api/$CM_API_VERSION/timeseries?desiredRollup=HOURLY&mustUseDesiredRollup=true&from=$cm_extract_start_date&to=$cm_extract_curr_date&query=SELECT%20yarn_reports_containers_used_vcores,total_allocated_vcores_across_yarn_pools,total_available_vcores_across_yarn_pools%20as%20vcores_available,yarn_reports_containers_used_memory,total_available_memory_mb_across_yarn_pools,total_allocated_memory_mb_across_yarn_pools%20as%20memory_available'"
     cmImpalaUtilization="$CURL -X GET -u $CM_ADMIN_USER:$CM_ADMIN_PASSWORD '$http$CM_SERVER_URL:$CM_SERVER_PORT/api/$CM_API_VERSION/timeseries?desiredRollup=HOURLY&mustUseDesiredRollup=true&from=$cm_extract_start_date&to=$cm_extract_curr_date&query=select%20impala_query_thread_cpu_time_rate,impala_query_admission_wait_rate,impala_query_query_duration_rate,impala_query_memory_accrual_rate,total_mem_tracker_process_limit_across_impalads,total_impala_admission_controller_local_backend_mem_reserved_across_impala_daemon_pools,total_impala_admission_controller_local_backend_mem_usage_across_impala_daemon_pools%20WHERE%20category=CLUSTER'"
 
     cm_HostRoles=cmHostRoles_$curr_date.json
     cm_HDFSUsage=cmHDFSUsage_$curr_date.json
 
-    cm_YarnUtlization=cmYarnUtiliation_$curr_date.json
+    cm_YarnUtilization=cmYarnUtilization_$curr_date.json
     cm_Yarn_MemCPU=cmYarnMemoryAndCPU_$curr_date.json
     cm_ImpalaUtilization=cmImpalaUtilization_$curr_date.json
 
     eval $cmHostRoles > $CM_out_dir$cm_HostRoles
     eval $cmHDFSUsage > $CM_out_dir$cm_HDFSUsage
 
-    eval $cmYarnUtilization > $CM_out_dir$cm_YarnUtlization
+    eval $cmYarnUtilization > $CM_out_dir$cm_YarnUtilization
     eval $cmYarnMemCpu > $CM_out_dir$cm_Yarn_MemCPU
     eval $cmImpalaUtilization > $CM_out_dir$cm_ImpalaUtilization
 
