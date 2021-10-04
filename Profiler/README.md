@@ -4,15 +4,17 @@
 
 ### 1. YARN Application execution, Host , metrics and Scheduler Information
 
-### 2. If the Distribution is CDH, then extract contains
+### 2. Spark History Server Metrics 
+
+### 3. If the Distribution is CDH, then extract contains
 ####     -  the Services, host and components from Cloudera Manager (CM)
 ####     -  Impala logs based on the input dates 
 
-### 3. If the Distribution is HDP, then extract contains
+### 4. If the Distribution is HDP, then extract contains
 ####     -  the blueprint, Service, hosts and host components from Ambari
 ####     -  Ranger policies and Repos if Ranger is Used
 
-### 4. If the Distribution is neither CDH or HDP (i.e. OTH), then only YARN Metrics will be extracted
+### 5. If the Distribution is neither CDH or HDP (i.e. OTH), then only YARN  and Spark History Server metrics will be extracted
 
 
 # Configuration Updates 
@@ -124,6 +126,60 @@ After initial extraction, we recommend running the script daily for at least 2 w
 <br />
 <p><span style="font-weight: 400;">(use only when GOT_KEYTAB=Y)</span></p>
 </td>
+</tr>
+<tr>
+<td>
+</tr>
+<tr>
+<td rowspan="8">
+<p><span style="font-weight: 400;">Spark History Server Configs</span></p>
+</td>
+<td>
+<p><span style="font-weight: 400;">SPARK_HS_URL</span></p>
+</td>
+<td>
+<p><span style="font-weight: 400;">Spark History Server URL. &nbsp;</span></p>
+<br />
+<p><span style="font-weight: 400;">Use Cloudera Manager or Ambari, navigate to Spark Service and copy the host name from URL in your browser</span></p>
+</td>
+</tr>
+<tr>
+<td>
+<p><span style="font-weight: 400;">SPARK_HS_PORT</span></p>
+</td>
+<td>
+<p><span style="font-weight: 400;">Spark History Server Port &nbsp;</span></p>
+<br />
+<p><span style="font-weight: 400;">(see instructions above)</span></p>
+</td>
+</tr>
+<tr>
+<td>
+<p><span style="font-weight: 400;">SPARK_HS_SECURE</span></p>
+</td>
+<td>
+<p><span style="font-weight: 400;">Is https enabled (Y/N)&nbsp;</span></p>
+</td>
+</tr>
+<tr>
+<td>
+<p><span style="font-weight: 400;">SPARK_HS_KERBERIZED</span></p>
+</td>
+<td>
+<p><span style="font-weight: 400;">Is Kerberized (Y/ N)&nbsp;</span></p>
+</td>
+</tr>
+<tr>
+
+</tr>
+<tr>
+
+</tr>
+<tr>
+
+</tr>
+<tr>
+
 </tr>
 <tr>
 <td>&nbsp;</td>
