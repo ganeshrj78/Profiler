@@ -6,14 +6,21 @@
 #
 # 1. YARN Application execution, Host , metrics and Scheduler Information 
 #
-# 2. If the Distribution is HDP, then it will extract
+# 2. SPARH History Server logs 
+#
+# 3. If the Distribution is HDP, then the script will extract
 #     -  the blueprint from Ambari 
 #     -  Ranger policies if Ranger is Used 
 #
-# 3. If the Distribution is CDP, then it will extract
+# 4. If the Distribution is CDH, then the script  will extract
 #     -  the Services from CM        
 #     -  Impala logs based on the input dates 
+#     -  Time Series data from CM 
 #
+# 5. If the Distribution is OTH, then the script will extract
+#     -  YARN Extract 
+#     -  Spark History server Extract 
+#    
 #####################################################################################
 
 
@@ -352,14 +359,15 @@ extract_cm_timeseries() {
     cm_extract_curr_date=`date +"%Y-%m-%d"`
     cm_extract_start_date=`date -d '-1 month' +"%Y-%m-%d"`
 
-    cmYarnUtilization="$CURL -X GET -u $CM_ADMIN_USER:$CM_ADMIN_PASSWORD '$http$CM_SERVER_URL:$CM_SERVER_PORT/api/$CM_API_VERSION/timeseries?desiredRollup=HOURLY&mustUseDesiredRollup=true&from=$cm_extract_start_date&to=$cm_extract_curr_date&query=select%20allocated_memory_mb_cumulative,available_memory_mb,allocated_memory_gb,available_memory_mb,available_vcores,allocated_vcores,allocated_vcores_cumulative'"
+    cmYarnUtilization="$CURL -X GET -u $CM_ADMIN_USER:$CM_ADMIN_PASSWORD '$http$CM_SERVER_URL:$CM_SERVER_PORT/api/$CM_API_VERSION/timeseries?desiredRollup=HOURLY&mustUseDesiredRollup=true&from=$cm_extract_start_date&to=$cm_extract_curr_date&query=select%20allocated_memory_mb,allocated_memory_mb_cumulative,available_memory_mb,allocated_memory_gb,available_memory_mb,available_vcores,allocated_vcores,allocated_vcores_cumulative'"
     cmYarnMemCpu="$CURL -X GET -u $CM_ADMIN_USER:$CM_ADMIN_PASSWORD '$http$CM_SERVER_URL:$CM_SERVER_PORT/api/$CM_API_VERSION/timeseries?desiredRollup=HOURLY&mustUseDesiredRollup=true&from=$cm_extract_start_date&to=$cm_extract_curr_date&query=SELECT%20yarn_reports_containers_used_vcores,total_allocated_vcores_across_yarn_pools,total_available_vcores_across_yarn_pools%20as%20vcores_available,yarn_reports_containers_used_memory,total_available_memory_mb_across_yarn_pools,total_allocated_memory_mb_across_yarn_pools%20as%20memory_available'"
-    cmImpalaUtilization="$CURL -X GET -u $CM_ADMIN_USER:$CM_ADMIN_PASSWORD '$http$CM_SERVER_URL:$CM_SERVER_PORT/api/$CM_API_VERSION/timeseries?desiredRollup=HOURLY&mustUseDesiredRollup=true&from=$cm_extract_start_date&to=$cm_extract_curr_date&query=select%20impala_query_thread_cpu_time_rate,impala_query_admission_wait_rate,impala_query_query_duration_rate,impala_query_memory_accrual_rate,total_mem_tracker_process_limit_across_impalads,total_impala_admission_controller_local_backend_mem_reserved_across_impala_daemon_pools,total_impala_admission_controller_local_backend_mem_usage_across_impala_daemon_pools%20WHERE%20category=CLUSTER'"
+    cmImpalaUtilization="$CURL -X GET -u $CM_ADMIN_USER:$CM_ADMIN_PASSWORD '$http$CM_SERVER_URL:$CM_SERVER_PORT/api/$CM_API_VERSION/timeseries?desiredRollup=HOURLY&mustUseDesiredRollup=true&from=$cm_extract_start_date&to=$cm_extract_curr_date&query=select%20queries_successful_rate,queries_ingested_rate,queries_timed_out_rate,queries_rejected_rate,impala_query_thread_cpu_time_rate,impala_query_admission_wait_rate,impala_query_query_duration_rate,impala_query_memory_accrual_rate,mem_rss_across_impalads,total_mem_rss_across_impalads,num_queries_rate_across_impalads,total_num_queries_rate_across_impalads,impala_memory_rss,impala_memory_total_used,total_mem_tracker_process_limit_across_impalads,total_impala_admission_controller_local_backend_mem_reserved_across_impala_daemon_pools,total_impala_admission_controller_local_backend_mem_usage_across_impala_daemon_pools%20WHERE%20category=CLUSTER'"
+
 
     cm_HostRoles=cmHostRoles_$curr_date.json
     cm_HDFSUsage=cmHDFSUsage_$curr_date.json
 
-    cm_YarnUtilization=cmYarnUtiliation_$curr_date.json
+    cm_YarnUtilization=cmYarnUtilization_$curr_date.json
     cm_Yarn_MemCPU=cmYarnMemoryAndCPU_$curr_date.json
     cm_ImpalaUtilization=cmImpalaUtilization_$curr_date.json
 
