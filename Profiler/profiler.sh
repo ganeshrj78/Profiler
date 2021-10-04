@@ -6,14 +6,21 @@
 #
 # 1. YARN Application execution, Host , metrics and Scheduler Information 
 #
-# 2. If the Distribution is HDP, then it will extract
+# 2. SPARH History Server logs 
+#
+# 3. If the Distribution is HDP, then the script will extract
 #     -  the blueprint from Ambari 
 #     -  Ranger policies if Ranger is Used 
 #
-# 3. If the Distribution is CDP, then it will extract
+# 4. If the Distribution is CDH, then the script  will extract
 #     -  the Services from CM        
 #     -  Impala logs based on the input dates 
+#     -  Time Series data from CM 
 #
+# 5. If the Distribution is OTH, then the script will extract
+#     -  YARN Extract 
+#     -  Spark History server Extract 
+#    
 #####################################################################################
 
 
@@ -22,6 +29,8 @@
 ## Init Variables 
 
 export curr_date=`date +"%Y%m%d_%H%M%S"`
+export extract_date=`date +"%Y-%m-%d"`
+
 export yesterday_impala_extract_dt=`date -d '-1 day' +"%Y-%m-%d"`
 
 export output_dir=`dirname ${0}`/Output/
@@ -50,17 +59,15 @@ check_kerberos()  {
 
         echo " Kerberos is set as True. Make sure to Kinit before executing the script. Current Credential Cache is ... "
         eval klist
-        echo "                                                                   " 
+        echo "\n"
 
-	if [ "$GOT_KEYTAB" == "Y" ]; then 
-	    echo " Initializing with Keytab provided ..... " 
-	    kinit="kinit -kt $KEYTAB_PATH/$KEYTAB $PRINCIPAL"
-	    eval $kinit
+        if [ "$GOT_KEYTAB" == "Y" ]; then 
+            echo " Initializing with Keytab provided ..... " 
+            kinit="kinit -kt $KEYTAB_PATH/$KEYTAB $PRINCIPAL"
+            eval $kinit
             eval klist
-
-	#else 
-            #echo " Press Enter to Continue or Ctrl+C to cancel  .... "
-            #read input
+                #echo " Press Enter to Continue or Ctrl+C to cancel  .... "
+                #read input
         fi 
 
         ## Patch up Kerberos URL 
@@ -157,7 +164,7 @@ extract_yarn_scheduler()  {
 ###############################################################
 extract_yarn() { 
 
-    yarn_out_dir=$output_dir/YARN/
+    yarn_out_dir=$output_dir/YARN/$extract_date/
     mkdir -p $yarn_out_dir
 
     check_active_rm
@@ -173,7 +180,68 @@ extract_yarn() {
 
 }
 
+###############################################################
+### Extract SPARK  Logs 
+### - Applications, Executors and Environment Variables 
+###############################################################
 
+extract_spark_logs() { 
+
+    SPARK_out_dir=$output_dir/SPARK/$extract_date/
+    mkdir -p $SPARK_out_dir
+
+    if [ "$SPARK_HS_SECURE" == "Y" ]; then 
+        CURL="$CURL -k "
+        http="https://"
+    else 
+        CURL="$CURL " 
+        http="http://"
+    fi 
+
+    if [ "$SPARK_HS_KERBERIZED" == "Y" ]; then
+
+        echo " Kerberos is set as True. Make sure to Kinit before executing the script. Current Credential Cache is ... "
+        eval klist
+        echo "                                                                   " 
+
+        ## Patch up Kerberos URL 
+        sparkurl=$(echo $CURL$kerburl$http)
+    else 
+        ## Patch up Kerberos URL 
+        sparkurl=$(echo $CURL$http)
+    fi
+
+    cm_extract_curr_date=`date +"%Y-%m-%d"`
+    cm_extract_start_date=`date -d '-1 month' +"%Y-%m-%d"`
+
+
+    if [ "$INITIAL_EXEC" == "Y" ]; then 
+         extract_start_date=`date -d '-1 month' +"%Y-%m-%d"`
+    else 
+         extract_start_date=`date -d '-1 day' +"%Y-%m-%d"`
+    fi
+
+    #extract_start_date="2020-01-01"
+    
+    sparkHSapps=$sparkurl$SPARK_HS_URL:$SPARK_HS_PORT/api/v1/applications?minDate=$extract_start_date
+    sparkHSlist=`$sparkurl$SPARK_HS_URL:$SPARK_HS_PORT/api/v1/applications?minDate=$extract_start_date |grep id | cut -f2 -d":" |sed -e 's/"//g' | sed -e 's/,//g'`
+
+    sparkApps=Spark_Applications_$curr_date.json
+      
+    eval $sparkHSapps  > $SPARK_out_dir$sparkApps
+       
+    for apps in $sparkHSlist;
+    do
+        echo $apps 
+        applEnv=$sparkurl$SPARK_HS_URL:$SPARK_HS_PORT/api/v1/applications/$apps/environment
+        applExec=$sparkurl$SPARK_HS_URL:$SPARK_HS_PORT/api/v1/applications/$apps/executors
+
+        eval  $applEnv > ${SPARK_out_dir}${apps}_env.json
+        eval  $applExec > ${SPARK_out_dir}${apps}_executors.json
+    done
+      
+    
+} 
 
 
 ###########################################
@@ -185,7 +253,7 @@ extract_ambari_bp() {
     echo " Extracting Ambari Blueprint .. "
 
     if [ $AMBARI_SECURED == "Y" ]; then 
-        CURL="$CURL -k"
+        CURL="$CURL -k "
         http="https://"
     else 
         CURL="$CURL " 
@@ -235,7 +303,7 @@ extract_ambari_bp() {
 extract_ranger_policies() { 
  
     if [ "$RANGER_SECURED" == "Y" ]; then
-        CURL="$CURL -k"
+        CURL="$CURL -k "
         http="https://"
     else
         CURL="$CURL "
@@ -253,23 +321,24 @@ extract_ranger_policies() {
 
 }
 
-
-
 extract_hdp() { 
 
     check_kerberos
     extract_yarn
-  
+
+    if [ "$SPARK_EXTRACT" == "Y" ]; then 
+        extract_spark_logs
+    fi  
 
     if [ "$INITIAL_EXEC" == "Y" ]; then 
-        ambari_out_dir=$output_dir/AMBARI/
+        ambari_out_dir=$output_dir/AMBARI/$extract_date/
         mkdir -p $ambari_out_dir
 
        extract_ambari_bp
       
 
        if [ "$IS_RANGER_SETUP" == "Y" ]; then
-            ranger_out_dir=$output_dir/RANGER/
+            ranger_out_dir=$output_dir/RANGER/$extract_date/
             mkdir -p $ranger_out_dir
             extract_ranger_policies
        fi 
@@ -279,7 +348,6 @@ extract_hdp() {
     fi
 
 }
-
 
 ### Extract Cloudera Manager Timeseries data for Usage, Roles, HDFS Usage and other Metrics
 
@@ -318,7 +386,7 @@ extract_cm_timeseries() {
 
 extract_cm_info() {
 
-    CM_out_dir=$output_dir/CM/
+    CM_out_dir=$output_dir/CM/$extract_date/
     mkdir -p $CM_out_dir
 
     if [ "$CM_SECURED" == "Y" ]; then 
@@ -366,11 +434,11 @@ extract_impala() {
 
     echo "Extracting Impala Queries " 
 
-    IMPALA_out_dir=$output_dir/IMPALA/
+    IMPALA_out_dir=$output_dir/IMPALA/$extract_date/
     mkdir -p $IMPALA_out_dir
 
     if [ "$CM_SECURED" == "Y" ]; then 
-        CURL="$CURL -k"
+        CURL="$CURL -k "
         http="https://"
     else 
         CURL="$CURL " 
@@ -433,10 +501,16 @@ extract_impala() {
   
 }
 
+
+
 extract_cdp() { 
 
     check_kerberos
     extract_yarn
+
+    if [ "$SPARK_EXTRACT" == "Y" ]; then 
+        extract_spark_logs
+    fi
     
     if [ "$INITIAL_EXEC" == "Y" ]; then 
        
@@ -465,6 +539,10 @@ extract_other_oss() {
     check_kerberos
     extract_yarn
  
+    if [ "$SPARK_EXTRACT" == "Y" ]; then 
+        extract_spark_logs
+    fi  
+
     echo " ####################################################################################################"
     echo " NOTE: This is an Initial Extract. Please inspect the files to make sure the extracts are fine .... "
     echo " ####################################################################################################"
